@@ -18,52 +18,53 @@ detector = mht.MultiHandTracker(palm_model_path, landmark_model_path, anchors_pa
 def localize(frames):
     """
     Localize the hands in each of the frames.
-    :param frames: Shape (n,rows,cols,depth) n being the number of letters in the sequence.
-    Image files must be opened with Image module from PIL.
-    :return: For each frame, a square bounding box [x,y] coordinates with shape (n,4,2).
+    :param frames: Shape (n,num,rows,cols,depth) n being the number of letters in the sequence, and
+    num being the number of frames per letter. Image files must be opened with Image module from PIL.
+    :return: For each frame, a square bounding box [x,y] coordinates with shape (n,num,4,2).
     """
-    n,r,c,_ = np.shape(frames)
-    coords = np.zeros((n,4,2))
+    n,num,r,c,_ = np.shape(frames)
+    coords = np.zeros((n,num,4,2))
     for i in range(n):
-        arr = np.array(frames[i,:,:,:])
-        # get predictions
-        try:
-            kp_list, box_list = detector(arr)
-        except TypeError:
-            print("Error in running hand detector on the ith frame: " + str(i) + ". Try another frame.")
-            print("Also make sure to use Image module from PIL to open images, NOT cv2 imread.")
-            #raise
-            continue
-        if kp_list[0] is None:
-            print("No keypoints found in the ith frame: " + str(i) + ". Try another frame.")
-            print("Also make sure to use Image module from PIL to open images, NOT cv2 imread.")
-            #raise RuntimeError
-            continue
-        # get bounding box
-        x = []
-        y = []
-        for kp in kp_list[0]:  # first set of keypoints
-            x.append(kp[0])
-            y.append(kp[1])
-        minx = max(min(x) - 25, 0)  # padding
-        miny = max(min(y) - 25, 0)
-        maxx = max(x) + 25
-        maxy = max(y) + 25
-        width = maxx - minx
-        height = maxy - miny
-        l = max(width, height)  # square bounding box
-        minx = max(minx - ((l - width) / 2), 0)
-        maxx = minx + l
-        assert maxx < c
-        miny = max(miny - ((l - height) / 2), 0)
-        maxy = miny + l
-        assert maxy < r
-        bbox = []
-        bbox.append([minx, miny])
-        bbox.append([maxx, miny])
-        bbox.append([maxx, maxy])
-        bbox.append([minx, maxy])
-        coords[i,:,:] = np.array(bbox)
+        for j in range(num):
+            arr = np.array(frames[i,j,:,:,:])
+            # get predictions
+            try:
+                kp_list, box_list = detector(arr)
+            except TypeError:
+                print("Error in running hand detector on the ith frame: " + str(i) + ". Try another frame.")
+                print("Also make sure to use Image module from PIL to open images, NOT cv2 imread.")
+                #raise
+                continue
+            if kp_list[0] is None:
+                print("No keypoints found in the ith frame: " + str(i) + ". Try another frame.")
+                print("Also make sure to use Image module from PIL to open images, NOT cv2 imread.")
+                #raise RuntimeError
+                continue
+            # get bounding box
+            x = []
+            y = []
+            for kp in kp_list[0]:  # first set of keypoints
+                x.append(kp[0])
+                y.append(kp[1])
+            minx = max(min(x) - 25, 0)  # padding
+            miny = max(min(y) - 25, 0)
+            maxx = max(x) + 25
+            maxy = max(y) + 25
+            width = maxx - minx
+            height = maxy - miny
+            l = max(width, height)  # square bounding box
+            minx = max(minx - ((l - width) / 2), 0)
+            maxx = minx + l
+            assert maxx < c
+            miny = max(miny - ((l - height) / 2), 0)
+            maxy = miny + l
+            assert maxy < r
+            bbox = []
+            bbox.append([minx, miny])
+            bbox.append([maxx, miny])
+            bbox.append([maxx, maxy])
+            bbox.append([minx, maxy])
+            coords[i,j,:,:] = np.array(bbox)
     return coords
 
 def process():

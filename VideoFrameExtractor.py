@@ -2,7 +2,6 @@
 """
 Created on Wed Nov 25 17:42:23 2020
 
-@author: harsh
 """
 
 import numpy as np
@@ -19,7 +18,8 @@ args = parser.parse_args()
 framedata=[]
 cap = cv2.VideoCapture(args.file)
 if (cap.isOpened()== False): 
-  print("Error opening video stream or file")
+    print("Error opening video stream or file")
+    sys.exit(1)
 fps = cap.get(cv2.CAP_PROP_FPS)
 success = 1
 while(success):
@@ -93,19 +93,22 @@ threshold=np.mean(mv2) # the threshold value is the average of the heavily smoot
 
 
 
-# loop to extract frames such that only 1 frame is extracted between every supposed movement
+# loop to extract frames such that num frames are extracted between every supposed movement
 count=0
 result=[]
-#num = 4 # number of frames to extract between movements
+num = 4 # number of frames to extract between movements
+resultx=[]
+result_final=[]
 for i in range(len(mv)-1):
     frame1= mv[i]
     frame2= mv[i+1]
     change= frame2-frame1
     if count==0:
         if frame2 < threshold:
-            #for j in range(1,num+1):
-            #    result.append(predata[i+j])
-            result.append(predata[i+j])
+            for j in range(1,num+1):
+                resultx.append(predata[i+j])
+            result_final.append(resultx) # shape will be (n,num,rows,cols,depth)
+            resultx=[]
             count=count+1
     if count == 1: 
         if frame2 > threshold: 
@@ -123,11 +126,12 @@ plt.plot(mv2,color='Red')
 plt.show()
 
 # show the extracted images
-for i in range(len(result)):
-    plt.imshow(result[i], interpolation='nearest')
-    plt.show()
+#for i in range(np.shape(result_final)[0]): # number of letters
+#    for j in range(np.shape(result_final)[1]): # number of frames per letter
+#        plt.imshow(result_final[i][j], interpolation='nearest')
+#        plt.show()
 
-result=np.array(result)
+result_final=np.array(result_final) # final result storing multiple frames per alphabet
 
 #Convert to pillow images and reconvert to numpy array to enter into albert's code
 
@@ -135,21 +139,43 @@ from PIL import Image
 from numpy import array
 
 result2=[] 
-for i in range(len(result)):
-    img = Image.fromarray(result[i])
-    img2arr = array(img)
-    result2.append(img2arr)
+result2_final=[]
+for i in range(np.shape(result_final)[0]): # number of letters
+    for j in range(np.shape(result_final)[1]): # number of frames per letter
+        img = Image.fromarray(result_final[i][j])
+        img2arr = array(img)
+        result2.append(img2arr)
+    result2_final.append(result2)
+    result2=[]
 
 from demo import localize
-result2 = np.array(result2)
-ret = localize(result2)
-print(ret)
+result2_final = np.array(result2_final)
+coordinates = localize(result2_final) # ret is np array with shape (n,num,4,2)
+#print(coordinates)
 
-#counter = 0 
-#for i in range(np.shape(ret)[0]):
-#    for 
-#    counter += 1
-#    if np.any(ret[i,:,:]):
-        
+def crop_hand(frame, coords):
+    """
+    Given coords which gives a square bounding box of the hand, crop from frame.
+    frame: shape is (720,1280,3), np array
+    coords: shape is (4,2) with 4-[x,y] coordinates, np array
+    returns: np array with shape (l,l,3) where l is length of bounding box
+    """
+    upper_left = [int(c) for c in coords[0,:]] # has [x,y] for upper left
+    upper_right = [int(c) for c in coords[1,:]]
+    lower_right = [int(c) for c in coords[2,:]]
+    lower_left = [int(c) for c in coords[3,:]]
+    crop = frame[upper_left[1]:lower_left[1],upper_left[0]:upper_right[0],:]
+    plt.imshow(crop, interpolation='nearest')
+    plt.show()
+    return crop
 
+# for every letter, pick one valid frame; if no valid frames, the letter will be skipped
+cropped = [] # list of np arrays, each array having shape (l,l,3) where l is length of bounding box
+for i in range(np.shape(coordinates)[0]):
+    for j in range(np.shape(coordinates)[1]):
+        if np.any(coordinates[i,j,:,:]): # if coordinates not all zeros, then valid frame
+            cropped.append(crop_hand(result2_final[i,j,:,:,:], coordinates[i,j,:,:]))
+            break # found valid frame, go to next letter
+
+# feed each list element in cropped to CNN to predict
 
