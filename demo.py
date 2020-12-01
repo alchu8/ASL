@@ -5,8 +5,6 @@ import os
 sys.path.insert(0, "src/")
 import multi_hand_tracker as mht
 
-img_path = "C:/Users/alchu/Pictures/images/"
-
 palm_model_path = "./models/palm_detection_without_custom_op.tflite"
 landmark_model_path = "./models/hand_landmark.tflite"
 anchors_path = "./data/anchors.csv"
@@ -73,14 +71,15 @@ def process():
     :return:
     """
     import csv
-    #import plot_hand
+    import plot_hand
     #f = open('hands.csv', 'w', newline='')
     #csvwriter = csv.writer(f, delimiter=',')
 
-    #imglist = [x for x in os.listdir(img_path) if x.endswith(('.png', '.jpg'))]
+    img_path = "C:/Users/alchu/Pictures/new sets/" # CHANGE
+    imglist = [x for x in os.listdir(img_path) if x.endswith(('.png', '.jpg'))]
     #imglist = ['p_Daniel.jpg','p_Daniel3.jpg','p_Everett2.jpg','p_Everett3.jpg','q_Daniel2.jpg',
     #           'q_Everett.jpg','q_Everett3.jpg','x_Daniel2.jpg','z_Everett.jpg','z_Everett2.jpg','z_Everett3.jpg']
-    imglist = ['p_Daniel3.jpg']
+    #---------------Don't edit from this point on------------------
     for idx, filename in enumerate(imglist):
         img = Image.open(img_path + filename)
         img = np.array(img)
@@ -92,7 +91,7 @@ def process():
             print(filename)
             continue
         if kp_list[0] is None:
-            print(filename)
+            print(filename + ", keypoints is None.")
             continue
         # Get bounding box
         x = []
@@ -100,10 +99,11 @@ def process():
         for kp in kp_list[0]: # first set of keypoints
             x.append(kp[0])
             y.append(kp[1])
-        minx = max(min(x) - 25, 0) # padding
-        miny = max(min(y) - 25, 0)
-        maxx = max(x) + 25
-        maxy = max(y) + 25
+        padding = 35 # in pixels
+        minx = max(min(x) - padding, 0)
+        miny = max(min(y) - padding, 0)
+        maxx = max(x) + padding
+        maxy = max(y) + padding
         width = maxx - minx
         height = maxy - miny
         l = max(width,height) # square bounding box
@@ -124,12 +124,12 @@ def process():
         #print(np.shape(bbox[0]))
         #csvwriter.writerow([filename, bbox[0]])
         # Plot predictions
-        # try:
-        #     plot_hand.plot_img(img, kp_list, bbox, save="C:/Users/alchu/Pictures/out/" + filename)
-        # except TypeError: # multiple sets of keypoints bug out the plot function
-        #     print(filename)
-        #     continue
+        try:
+            plot_hand.plot_img(img, kp_list, bbox, save=None)
+        except TypeError: # multiple sets of keypoints bug out the plot function
+            print(filename + " has multiple sets of keypoints.")
+            continue
     #f.close()
 
-#if __name__ == "__main__":
-#    process()
+if __name__ == "__main__":
+    process()

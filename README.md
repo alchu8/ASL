@@ -18,3 +18,8 @@ It will show the sequence of cropped images corresponding to detected hand signa
 
 **Note**: image arrays must be opened with Image module from PIL. 
 When passing in to localize, they can be converted to numpy arrays, but they ***must*** be opened as PIL images, and not as cv2 images.
+
+Call demo.py to validate that the detector can localize the hand in your images. Just change the local path name in code where it says CHANGE. 
+The code will plot the bounding box with your hand keypoints if detection was successful. Unsuccessful image filenames will be printed to console.  
+
+`python demo.py`
