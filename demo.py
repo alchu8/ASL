@@ -1,7 +1,6 @@
 from PIL import Image
 import numpy as np
-import sys
-import os
+import sys, os
 sys.path.insert(0, "src/")
 import multi_hand_tracker as mht
 
@@ -12,10 +11,11 @@ anchors_path = "./data/anchors.csv"
 # Initialise detector
 # the independent flag makes the detector process each image independently, false for videos
 detector = mht.MultiHandTracker(palm_model_path, landmark_model_path, anchors_path, independent = True)
+padding = 35 # in pixels
 
 def localize(frames):
     """
-    Localize the hands in each of the frames.
+    Localize the hands in each of the frames of a video.
     :param frames: Shape (n,num,rows,cols,depth) n being the number of letters in the sequence, and
     num being the number of frames per letter. Image files must be opened with Image module from PIL.
     :return: For each frame, a square bounding box [x,y] coordinates with shape (n,num,4,2).
@@ -44,10 +44,10 @@ def localize(frames):
             for kp in kp_list[0]:  # first set of keypoints
                 x.append(kp[0])
                 y.append(kp[1])
-            minx = max(min(x) - 25, 0)  # padding
-            miny = max(min(y) - 25, 0)
-            maxx = max(x) + 25
-            maxy = max(y) + 25
+            minx = max(min(x) - padding, 0)
+            miny = max(min(y) - padding, 0)
+            maxx = max(x) + padding
+            maxy = max(y) + padding
             width = maxx - minx
             height = maxy - miny
             l = max(width, height)  # square bounding box
@@ -67,18 +67,17 @@ def localize(frames):
 
 def process():
     """
-    Prepares data for CNN training. Outputs csv file of bounding box coordinates for each frame.
-    :return:
+    Prepares data for CNN training.
+    :return: Outputs csv file of bounding box coordinates for each frame.
     """
     import csv
     import plot_hand
-    #f = open('hands.csv', 'w', newline='')
-    #csvwriter = csv.writer(f, delimiter=',')
+    f = open('hands.csv', 'w', newline='')
+    csvwriter = csv.writer(f, delimiter=',')
 
-    img_path = "C:/Users/alchu/Pictures/new sets/" # CHANGE
+    img_path = "C:/Users/alchu/Pictures/Camera Roll/" # CHANGE
     imglist = [x for x in os.listdir(img_path) if x.endswith(('.png', '.jpg'))]
-    #imglist = ['p_Daniel.jpg','p_Daniel3.jpg','p_Everett2.jpg','p_Everett3.jpg','q_Daniel2.jpg',
-    #           'q_Everett.jpg','q_Everett3.jpg','x_Daniel2.jpg','z_Everett.jpg','z_Everett2.jpg','z_Everett3.jpg']
+    #imglist = ['x_Albert.jpg','x_Albert2.jpg','x_Albert3.jpg']
     #---------------Don't edit from this point on------------------
     for idx, filename in enumerate(imglist):
         img = Image.open(img_path + filename)
@@ -99,7 +98,6 @@ def process():
         for kp in kp_list[0]: # first set of keypoints
             x.append(kp[0])
             y.append(kp[1])
-        padding = 35 # in pixels
         minx = max(min(x) - padding, 0)
         miny = max(min(y) - padding, 0)
         maxx = max(x) + padding
@@ -122,14 +120,14 @@ def process():
         #print(kp_list)
         #print(bbox)
         #print(np.shape(bbox[0]))
-        #csvwriter.writerow([filename, bbox[0]])
+        csvwriter.writerow([filename, bbox[0]])
         # Plot predictions
         try:
             plot_hand.plot_img(img, kp_list, bbox, save=None)
         except TypeError: # multiple sets of keypoints bug out the plot function
             print(filename + " has multiple sets of keypoints.")
             continue
-    #f.close()
+    f.close()
 
 if __name__ == "__main__":
     process()
