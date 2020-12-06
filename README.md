@@ -23,3 +23,9 @@ Call demo.py to validate that the detector can localize the hand in your images.
 The code will plot the bounding box with your hand keypoints if detection was successful. Unsuccessful image filenames will be printed to console.  
 
 `python demo.py`
+
+## Acknowledgments
+
+This work is a study of models developed by Google and distributed as a part of the [Mediapipe](https://github.com/google/mediapipe) framework.   
+@metalwhale for the Python Wrapper for single hand tracking and for removing custom operations for the Palm Detections model. 
+Modules and models gathered at https://github.com/JuliaPoo/MultiHand-Tracking. 

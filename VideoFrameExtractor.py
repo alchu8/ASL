@@ -9,6 +9,67 @@ import cv2
 import math
 import argparse
 import sys
+import tensorflow as tf
+import os
+
+keras = tf.keras
+load_model = keras.models.load_model
+Model = keras.models.Model
+
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
+class HandShapeFeatureExtractor:
+    __single = None
+
+    def get_instance():
+        if HandShapeFeatureExtractor.__single is None:
+            HandShapeFeatureExtractor()
+        return HandShapeFeatureExtractor.__single
+
+    def __init__(self):
+        if HandShapeFeatureExtractor.__single is None:
+            real_model = load_model(os.path.join('./', 'aug_10k4.h5'))
+            self.model = real_model
+            HandShapeFeatureExtractor.__single = self
+
+        else:
+            raise Exception("This Class bears the model, so it is made Singleton")
+
+    def pre_process_input_image(self,crop):
+        try:
+            img = cv2.resize(crop, (200, 200))
+            img_arr = np.array(img) / 255.0
+            img_arr = img_arr.reshape(1, 200, 200, 1)
+            return img_arr
+        except Exception as e:
+            print(str(e))
+            raise
+
+    # calculating dimensions f0r the cropping the specific hand parts
+    # Need to change constant 80 based on the video dimensions
+    @staticmethod
+    def bound_box(x, y, max_y, max_x):
+        y1 = y + 80
+        y2 = y - 80
+        x1 = x + 80
+        x2 = x - 80
+        if max_y < y1:
+            y1 = max_y
+        if y - 80 < 0:
+            y2 = 0
+        if x + 80 > max_x:
+            x1 = max_x
+        if x - 80 < 0:
+            x2 = 0
+        return y1, y2, x1, x2
+
+    def extract_feature(self, image):
+        try:
+            img_arr = self.pre_process_input_image(image)
+            # input = tf.keras.Input(tensor=image)
+            return self.model.predict(img_arr)
+        except Exception as e:
+            raise
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--file', type=str, default=None, help="Path to video file.", required=True)
@@ -178,4 +239,16 @@ for i in range(np.shape(coordinates)[0]):
             break # found valid frame, go to next letter
 
 # feed each list element in cropped to CNN to predict
+predicted_word = ""
+hse = HandShapeFeatureExtractor()
+alpha_dict = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',' ']
+#with tf.device("cpu:0"):
+for i in cropped:
+    img = cv2.cvtColor(i, cv2.COLOR_BGR2GRAY)
+    output_probs = hse.extract_feature(img)
+    predicted_word+=alpha_dict[np.argmax(output_probs[0])]
 
+print(predicted_word)
+
+from closestdictword import closestWord
+print(closestWord(predicted_word))
